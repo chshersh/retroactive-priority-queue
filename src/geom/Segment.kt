@@ -7,15 +7,18 @@ data class Segment(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
         get() = y1 == y2
 }
 
+fun Point.distTo(x0: Int, y0: Int)
+        = Math.sqrt(((x - x0) * (x - x0) + (y - y0) * (y - y0)).toDouble()).toInt()
+
 fun Segment.distanceToPoint(p: Point) =
         if (isHorizontal) {
-            if (p.y == y1 && (p.x < x1 || x2 < p.x))
-                Math.min(Math.abs(p.x - x1), Math.abs(p.x - x2))
-            else
+            if (x1 <= p.x && p.x <= x2)
                 Math.abs(p.y - y1)
-        } else {
-            if (p.x == x1 && (p.y < y1 || y2 < p.y))
-                Math.min(Math.abs(p.y - y1), Math.abs(p.y - y2))
             else
+                Math.min(p.distTo(x1, y1), p.distTo(x2, y2))
+        } else {
+            if (y1 <= p.y && p.y <= y2)
                 Math.abs(p.x - x1)
+            else
+                Math.min(p.distTo(x1, y1), p.distTo(x2, y2))
         }
