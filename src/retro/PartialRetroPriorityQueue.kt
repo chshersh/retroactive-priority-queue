@@ -1,8 +1,9 @@
 package retro
 
+import geom.Segment
 import java.util.*
 
-data class Segment(val key: Int, val startLife: Int, val endLife: Int)
+data class KeyWithTime(val key: Int, val time: Int)
 
 class PartialRetroPriorityQueue(
         private val operations: SortedMap<Int, List<Operation>> = sortedMapOf()
@@ -31,22 +32,24 @@ class PartialRetroPriorityQueue(
         if (timeOps.isEmpty()) operations.remove(time)
     }
 
-    fun createSegments(): List<Segment> {
+    fun createSegments(lowestPoint: Int, maxLifeTime: Int): List<Segment> {
         val deadSegments = arrayListOf<Segment>()
-        val queue = PriorityQueue<Segment>({ s1, s2 -> s1.key.compareTo(s2.key) })
+        val queue = PriorityQueue<KeyWithTime>({ kt1, kt2 -> kt1.key.compareTo(kt2.key) })
 
         for ((time, ops) in operations) {
             for (operation in ops) {
                 when (operation) {
-                    is Operation.Add -> queue.add(Segment(operation.key, time, Int.MAX_VALUE))
+                    is Operation.Add -> queue.add(KeyWithTime(operation.key, time))
                     Operation.Extract -> {
                         val deadMin = queue.poll()
-                        deadSegments.add(deadMin.copy(endLife = time))
+
+                        deadSegments.add(Segment(deadMin.time, deadMin.key, time, deadMin.key))
+                        deadSegments.add(Segment(time, lowestPoint, time, deadMin.key))
                     }
                 }
             }
         }
 
-        return deadSegments + queue.toList()
+        return deadSegments + queue.toList().map { Segment(it.time, it.key, maxLifeTime, it.key) }
     }
 }

@@ -1,7 +1,8 @@
 package visualizer
 
+import geom.Segment
+import geom.distanceToPoint
 import retro.PartialRetroPriorityQueue
-import retro.Segment
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -13,7 +14,9 @@ enum class OperationMode {
 
 class Visualizer : JPanel() {
     private val retroQueue = PartialRetroPriorityQueue()
+
     private var cachedSegments: List<Segment> = listOf()
+    private var closestSegment: Segment? = null
 
     private var cursorPoint = Point(0, 0)
 
@@ -30,7 +33,7 @@ class Visualizer : JPanel() {
                                 OperationMode.ADD -> retroQueue.insertAddOperation(e.x, height - e.y)
                                 OperationMode.EXTRACT -> retroQueue.insertExtractOperation(e.x)
                             }
-                            cachedSegments = retroQueue.createSegments()
+                            cachedSegments = retroQueue.createSegments(0, width - 10)
                         }
 
                         isDrawAiming = !isDrawAiming
@@ -43,15 +46,36 @@ class Visualizer : JPanel() {
         addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
                 cursorPoint = e.point
+                closestSegment = null
+
+                if (!isDrawAiming) {
+                    var minDistance = Int.MAX_VALUE
+                    var mirroredPoint = cursorPoint.inverse()
+
+                    for (segment in cachedSegments) {
+                        val curDistance = segment.distanceToPoint(mirroredPoint)
+
+                        if (curDistance < 10 && (closestSegment == null || curDistance < minDistance)) {
+                            closestSegment = segment
+                            minDistance = curDistance
+                        }
+                    }
+                }
+
                 repaint()
             }
         })
     }
 
+    private val simpleBoldStroke = BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
+
     override fun getGraphics() = super.getGraphics()?.apply {
         this as Graphics2D
         setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     }
+
+    fun Graphics.drawSegment(s: Segment) = drawLine(s.x1, height - s.y1, s.x2, height - s.y2)
+    fun Point.inverse() = Point(this.x, height - this.y)
 
     override fun paint(g: Graphics) {
         g as Graphics2D
@@ -66,28 +90,28 @@ class Visualizer : JPanel() {
 
         val curTime = width - 10
 
-        for ((key, start, end) in cachedSegments) {
-            val drawKey = height - key
+        cachedSegments.map {
+            if (it.x2 == Int.MAX_VALUE) it.copy(x2 = curTime) else it
+        }.forEach { g.drawSegment(it) }
 
-            if (end == Int.MAX_VALUE) {
-                g.drawLine(start, drawKey, curTime, drawKey)
-            } else {
-                g.drawLine(start, drawKey, end, drawKey)
-                g.drawLine(end, height, end, drawKey)
-            }
+        if (closestSegment != null) {
+            val cs = closestSegment
+            g.color = Color.MAGENTA
+            g.stroke = simpleBoldStroke
+            g.drawSegment(cs)
         }
 
 
         // draw current time line
         g.color = Color.BLUE
         val curTimeDashingPattern = floatArrayOf(10f, 4f)
-        val curTimeStroke = BasicStroke(3f, BasicStroke.CAP_BUTT,
+        val curTimeStroke = BasicStroke(4f, BasicStroke.CAP_BUTT,
                 BasicStroke.JOIN_MITER, 1.0f, curTimeDashingPattern, 0.0f)
         g.stroke = curTimeStroke
         g.drawLine(curTime, 0, curTime, height)
 
         if (isDrawAiming) {
-            g.stroke = BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
+            g.stroke = simpleBoldStroke
 
             when (insertMode) {
                 OperationMode.ADD -> {
