@@ -26,9 +26,15 @@ class PartialRetroPriorityQueue(
         operations.put(time, currentList + operation)
     }
 
-    override fun deleteOperation(time: Int) {
+    override fun deleteAddOperation(time: Int) = deleteOperation(time) { it is Operation.Add }
+    override fun deleteExtractOperation(time: Int) = deleteOperation(time) { it !is Operation.Add }
+
+    inline private fun deleteOperation(time: Int, opFind: (Operation) -> Boolean) {
         val timeOps = operations[time] ?: return
-        operations.put(time, timeOps.subList(0, timeOps.lastIndex))
+        val pos = timeOps.indexOfFirst(opFind)
+
+        operations.put(time, timeOps.subList(0, pos) + timeOps.subList(pos + 1, timeOps.size))
+
         if (timeOps.isEmpty()) operations.remove(time)
     }
 

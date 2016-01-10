@@ -2,10 +2,13 @@ package geom
 
 import java.awt.Point
 
-data class Segment(val x1: Int, val y1: Int, val x2: Int, val y2: Int)
+data class Segment(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
+    val isHorizontal: Boolean
+        get() = y1 == y2
+}
 
 fun Segment.distanceToPoint(p: Point) =
-        if (y1 == y2) {
+        if (isHorizontal) {
             if (p.y == y1 && (p.x < x1 || x2 < p.x))
                 Math.min(Math.abs(p.x - x1), Math.abs(p.x - x2))
             else

@@ -37,6 +37,19 @@ class Visualizer : JPanel() {
                         }
 
                         isDrawAiming = !isDrawAiming
+
+                        if (closestSegment != null) {
+                            val cs = closestSegment
+
+                            if (cs.isHorizontal)
+                                retroQueue.deleteAddOperation(cs.x1)
+                            else
+                                retroQueue.deleteExtractOperation(cs.x1)
+
+                            cachedSegments = retroQueue.createSegments(0, width - 10)
+                            closestSegment = null
+                            isDrawAiming = false
+                        }
                     }
                 }
                 repaint()

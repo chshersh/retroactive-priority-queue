@@ -5,5 +5,7 @@ interface RetroPriorityQueue {
 
     fun insertAddOperation(time: Int, key: Int)
     fun insertExtractOperation(time: Int)
-    fun deleteOperation(time: Int)
+
+    fun deleteAddOperation(time: Int)
+    fun deleteExtractOperation(time: Int)
 }
