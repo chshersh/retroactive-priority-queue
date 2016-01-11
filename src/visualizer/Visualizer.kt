@@ -2,6 +2,7 @@ package visualizer
 
 import geom.Segment
 import geom.distanceToPoint
+import geom.emptySegment
 import retro.PartialRetroPriorityQueue
 import java.awt.*
 import java.awt.event.MouseAdapter
@@ -15,8 +16,8 @@ enum class OperationMode {
 class Visualizer : JPanel() {
     private val retroQueue = PartialRetroPriorityQueue()
 
-    private var cachedSegments: List<Segment> = listOf()
-    private var closestSegment: Segment? = null
+    private var cachedSegments = listOf<Segment>()
+    private var nearestSeg = emptySegment
 
     private var cursorPoint = Point(0, 0)
 
@@ -38,16 +39,15 @@ class Visualizer : JPanel() {
 
                         isDrawAiming = !isDrawAiming
 
-                        if (closestSegment != null) {
-                            val cs = closestSegment
+                        if (!nearestSeg.isEmpty) {
 
-                            if (cs.isHorizontal)
-                                retroQueue.deleteAddOperation(cs.x1)
+                            if (nearestSeg.isHorizontal)
+                                retroQueue.deleteAddOperation(nearestSeg.x1)
                             else
-                                retroQueue.deleteExtractOperation(cs.x1)
+                                retroQueue.deleteExtractOperation(nearestSeg.x1)
 
                             cachedSegments = retroQueue.createSegments(0, width - 10)
-                            closestSegment = null
+                            nearestSeg = emptySegment
                             isDrawAiming = false
                         }
                     }
@@ -59,7 +59,7 @@ class Visualizer : JPanel() {
         addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
                 cursorPoint = e.point
-                closestSegment = null
+                nearestSeg = emptySegment
 
                 if (!isDrawAiming) {
                     var minDistance = Int.MAX_VALUE
@@ -68,8 +68,8 @@ class Visualizer : JPanel() {
                     for (segment in cachedSegments) {
                         val curDistance = segment.distanceToPoint(mirroredPoint)
 
-                        if (curDistance < 10 && (closestSegment == null || curDistance < minDistance)) {
-                            closestSegment = segment
+                        if (curDistance < 10 && (nearestSeg.isEmpty || curDistance < minDistance)) {
+                            nearestSeg = segment
                             minDistance = curDistance
                         }
                     }
@@ -101,19 +101,15 @@ class Visualizer : JPanel() {
         g.drawString("Point: (${cursorPoint.x}, ${height - cursorPoint.y})", 0, 20)
         g.drawString("Mode: $insertMode key", 0, 40)
 
-        val curTime = width - 10
+        cachedSegments.forEach { g.drawSegment(it) }
 
-        cachedSegments.map {
-            if (it.x2 == Int.MAX_VALUE) it.copy(x2 = curTime) else it
-        }.forEach { g.drawSegment(it) }
-
-        if (closestSegment != null) {
-            val cs = closestSegment
+        if (!nearestSeg.isEmpty) {
             g.color = Color.MAGENTA
             g.stroke = simpleBoldStroke
-            g.drawSegment(cs)
+            g.drawSegment(nearestSeg)
         }
 
+        val curTime = width - 10
 
         // draw current time line
         g.color = Color.BLUE
@@ -137,7 +133,6 @@ class Visualizer : JPanel() {
                 }
             }
         }
-
     }
 
     fun switchMode() {

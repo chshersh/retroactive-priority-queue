@@ -5,7 +5,12 @@ import java.awt.Point
 data class Segment(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
     val isHorizontal: Boolean
         get() = y1 == y2
+
+    val isEmpty: Boolean
+        get() = this == emptySegment
 }
+
+val emptySegment = Segment(-1, -1, -1, -1)
 
 fun Point.distTo(x0: Int, y0: Int)
         = Math.sqrt(((x - x0) * (x - x0) + (y - y0) * (y - y0)).toDouble()).toInt()
