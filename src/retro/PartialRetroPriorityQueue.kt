@@ -47,7 +47,7 @@ class PartialRetroPriorityQueue(
                 when (operation) {
                     is Operation.Add -> queue.add(KeyWithTime(operation.key, time))
                     Operation.Extract -> {
-                        val deadMin = queue.poll()
+                        val deadMin = queue.poll() // NPE here on empty queue
 
                         deadSegments.add(Segment(deadMin.time, deadMin.key, time, deadMin.key))
                         deadSegments.add(Segment(time, lowestPoint, time, deadMin.key))
