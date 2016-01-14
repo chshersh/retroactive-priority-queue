@@ -15,7 +15,7 @@ enum class OperationMode {
 class Visualizer : JPanel() {
     private val retroQueue = PartialRetroPriorityQueue()
 
-    private var cachedSegments = listOf<Segment>()
+    private var cachedSegments = emptyList<Segment>()
     private var nearestSeg = emptySegment
 
     private var cursorPoint = Point(0, 0)
@@ -42,7 +42,7 @@ class Visualizer : JPanel() {
                                 OperationMode.ADD -> retroQueue.insertAddOperation(e.x, height - e.y)
                                 OperationMode.EXTRACT -> retroQueue.insertExtractOperation(e.x)
                             }
-                            cachedSegments = retroQueue.createSegments(0, endLife)
+                            cachedSegments = retroQueue.createSegments(endLife)
                         }
 
                         isDrawAiming = !isDrawAiming
@@ -54,7 +54,7 @@ class Visualizer : JPanel() {
                             else
                                 retroQueue.deleteExtractOperation(nearestSeg.x1)
 
-                            cachedSegments = retroQueue.createSegments(0, width - 10)
+                            cachedSegments = retroQueue.createSegments(endLife)
                             nearestSeg = emptySegment
                             isDrawAiming = false
                         }
@@ -147,7 +147,7 @@ class Visualizer : JPanel() {
                 val extractEnd = first?.y1 ?: height
 
                 g.color = Color.RED
-                g.drawLine(cpx, cpy, cpx, height - extractEnd)
+                g.drawLine(cpx, height, cpx, height - extractEnd)
             }
         }
 
@@ -155,51 +155,77 @@ class Visualizer : JPanel() {
         newSegments.forEach { g.drawSegment(it) }
     }
 
-    private fun findHorizontalSegment(xRay: Int, segments: MutableList<Segment>, isFirstRay: Boolean = false): Segment? {
-        val meetSegmentIndexed = segments.withIndex().filter {
-            it.value.isHorizontal && it.value.inXRange(xRay)
-        }.minBy { it.value.y1 } ?: return null
+    private fun traverseFromVertical(): Pair<List<Segment>, Segment?> {
+        val meetSegment = cachedSegments.filter {
+            it.isVertical && it.inYRange(cpyi) && it.x2 >= cpx
+        }.minBy(Segment::x2) ?: return Pair(emptyList(), null)
 
-        val ind = meetSegmentIndexed.index
-        val seg = meetSegmentIndexed.value
+        val updatedSegments = arrayListOf(meetSegment.copy(y2 = cpyi))
 
-        segments[ind] = seg.copy(x2 = xRay)
+        var cur = meetSegment.nextOnAdd
+        var prev = meetSegment
+        while (cur != null) {
+            val next = cur.nextOnAdd
+            if (next == null) {
+                val lastSegment = if (cur.isHorizontal)
+                    cur.copy(x2 = endLife)
+                else
+                    cur.copy(y2 = Int.MAX_VALUE)
 
-        if (seg.x2 != endLife) {
-            val next = findVerticalSegment(seg.y1, segments)
-            if (next != null && !isFirstRay) segments[ind] = seg.copy(x2 = next.x1)
+                updatedSegments.add(lastSegment)
+                break
+            }
+
+            val cutCopy = if (next.isVertical)
+                cur.copy(x2 = next.x2)
+            else
+                cur.copy(y2 = prev.y2)
+
+            updatedSegments.add(cutCopy)
+            prev = cur
+            cur = next
         }
 
-        return seg
+        return Pair(updatedSegments, meetSegment)
     }
 
-    private fun findVerticalSegment(yRay: Int, segments: MutableList<Segment>, isFirstRay: Boolean = false): Segment? {
-        val meetSegmentIndexed = segments.withIndex().filter {
-            !it.value.isHorizontal && it.value.inYRange(yRay)
-        }.minBy { it.value.x1 } ?: return null
+    private fun traverseFromHorizontal(): Pair<List<Segment>, Segment?> {
+        val meetSegment = cachedSegments.filter {
+            it.isHorizontal && it.inXRange(cpx)
+        }.minBy(Segment::y1) ?: return Pair(emptyList(), null)
 
-        val ind = meetSegmentIndexed.index
-        val seg = meetSegmentIndexed.value
+        val updatedSegments = arrayListOf(meetSegment.copy(x2 = cpx))
 
-        segments[ind] = seg.copy(y2 = yRay)
+        var cur = meetSegment.nextOnExtract
+        var prev = meetSegment
+        while (cur != null) {
+            val next = cur.nextOnExtract
+            if (next == null) {
+                val lastSegment = if (cur.isHorizontal)
+                    cur.copy(x2 = prev.x2)
+                else
+                    cur.copy(y2 = Int.MAX_VALUE)
 
-        if (seg.y2 != 0) {
-            val next = findHorizontalSegment(seg.x1, segments)
-            if (next != null && !isFirstRay) segments[ind] = seg.copy(y2 = next.y1)
+                updatedSegments.add(lastSegment)
+                break
+            }
+
+            val cutCopy = if (cur.isHorizontal)
+                cur.copy(x2 = prev.x2)
+            else
+                cur.copy(y2 = next.y2)
+
+            updatedSegments.add(cutCopy)
+            prev = cur
+            cur = next
         }
 
-        return seg
+        return Pair(updatedSegments, meetSegment)
     }
 
-    private fun updatedSegments(): Pair<List<Segment>, Segment?> {
-        val segmentsBuffer = arrayListOf(*cachedSegments.toTypedArray())
-
-        val firstSeg = when (insertMode) {
-            OperationMode.ADD -> findVerticalSegment(cpyi, segmentsBuffer, true)
-            OperationMode.EXTRACT -> findHorizontalSegment(cpx, segmentsBuffer, true)
-        }
-
-        return Pair(segmentsBuffer, firstSeg)
+    private fun updatedSegments() = when (insertMode) {
+        OperationMode.ADD     -> traverseFromVertical()
+        OperationMode.EXTRACT -> traverseFromHorizontal()
     }
 
     fun switchMode() {

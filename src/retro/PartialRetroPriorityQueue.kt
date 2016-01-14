@@ -3,8 +3,6 @@ package retro
 import geom.Segment
 import java.util.*
 
-data class KeyWithTime(val key: Int, val time: Int)
-
 class PartialRetroPriorityQueue(
         private val operations: SortedMap<Int, List<Operation>> = sortedMapOf()
 ) : RetroPriorityQueue {
@@ -38,24 +36,40 @@ class PartialRetroPriorityQueue(
         if (timeOps.isEmpty()) operations.remove(time)
     }
 
-    fun createSegments(lowestPoint: Int, maxLifeTime: Int): List<Segment> {
+    fun createSegments(maxLifeTime: Int): List<Segment> {
         val deadSegments = arrayListOf<Segment>()
-        val queue = PriorityQueue<KeyWithTime>({ kt1, kt2 -> kt1.key.compareTo(kt2.key) })
+        val queue = PriorityQueue<Segment>({ s1, s2 -> s1.y1.compareTo(s2.y1) })
+
+        var prevAddSegment: Segment? = null
 
         for ((time, ops) in operations) {
             for (operation in ops) {
                 when (operation) {
-                    is Operation.Add -> queue.add(KeyWithTime(operation.key, time))
-                    Operation.Extract -> {
-                        val deadMin = queue.poll() // NPE here on empty queue
+                    is Operation.Add -> queue.add(Segment(time, operation.key, maxLifeTime, operation.key))
+                    Operation.Extract ->
+                        if (queue.isEmpty()) {
+                            // non-accurate case handling for now
+                            deadSegments.add(Segment(time, 0, time, Int.MAX_VALUE))
+                        } else {
+                            val addSegment = queue.poll()
+                            val extractSegment = Segment(time, 0, time, addSegment.y1)
 
-                        deadSegments.add(Segment(deadMin.time, deadMin.key, time, deadMin.key))
-                        deadSegments.add(Segment(time, lowestPoint, time, deadMin.key))
-                    }
+                            addSegment.x2 = time
+                            addSegment.nextOnExtract = extractSegment
+
+                            extractSegment.nextOnAdd = addSegment
+                            extractSegment.nextOnExtract = queue.peek()
+
+                            prevAddSegment?.nextOnAdd = extractSegment
+                            prevAddSegment = addSegment
+
+                            deadSegments.add(extractSegment)
+                            deadSegments.add(addSegment)
+                        }
                 }
             }
         }
 
-        return deadSegments + queue.toList().map { Segment(it.time, it.key, maxLifeTime, it.key) }
+        return deadSegments + queue.toList()
     }
 }
