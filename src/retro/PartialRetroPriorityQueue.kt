@@ -37,6 +37,7 @@ class PartialRetroPriorityQueue(
     }
 
     fun createSegments(maxLifeTime: Int): List<Segment> {
+        var curId = 0
         val deadSegments = arrayListOf<Segment>()
         val queue = PriorityQueue<Segment>({ s1, s2 -> s1.y1.compareTo(s2.y1) })
 
@@ -45,14 +46,14 @@ class PartialRetroPriorityQueue(
         for ((time, ops) in operations) {
             for (operation in ops) {
                 when (operation) {
-                    is Operation.Add -> queue.add(Segment(time, operation.key, maxLifeTime, operation.key))
+                    is Operation.Add -> queue.add(Segment(curId++, time, operation.key, maxLifeTime, operation.key))
                     Operation.Extract ->
                         if (queue.isEmpty()) {
                             // non-accurate case handling for now
-                            deadSegments.add(Segment(time, 0, time, Int.MAX_VALUE))
+                            deadSegments.add(Segment(curId++, time, 0, time, Int.MAX_VALUE))
                         } else {
                             val addSegment = queue.poll()
-                            val extractSegment = Segment(time, 0, time, addSegment.y1)
+                            val extractSegment = Segment(curId++, time, 0, time, addSegment.y1)
 
                             addSegment.x2 = time
                             addSegment.nextOnExtract = extractSegment

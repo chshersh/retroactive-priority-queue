@@ -101,6 +101,12 @@ class Visualizer : JPanel() {
     override fun paint(g: Graphics) {
         g as Graphics2D
 
+        fun drawSimpleSegments(segments: List<Segment>) {
+            g.color = Color.WHITE
+            g.stroke = defaultStroke
+            segments.forEach { g.drawSegment(it) }
+        }
+
         g.color = Color.BLACK
         g.fillRect(0, 0, width, height)
 
@@ -117,10 +123,7 @@ class Visualizer : JPanel() {
         g.drawLine(endLife, 0, endLife, height)
 
         if (!isDrawAiming) {
-            // draw all segments (inserts and extracts) as rays
-            g.color = Color.WHITE
-            g.stroke = defaultStroke
-            cachedSegments.forEach { g.drawSegment(it) }
+            drawSimpleSegments(cachedSegments)
 
             // draw nearest segment
             if (!nearestSeg.isEmpty) {
@@ -151,8 +154,12 @@ class Visualizer : JPanel() {
             }
         }
 
+        val newSegmentsIds = newSegments.map(Segment::sid).toHashSet()
+        val unchangedSegments = cachedSegments.filter { it.sid !in newSegmentsIds }
+
         g.color = Color.ORANGE
         newSegments.forEach { g.drawSegment(it) }
+        drawSimpleSegments(unchangedSegments)
     }
 
     private fun traverseFromVertical(): Pair<List<Segment>, Segment?> {
