@@ -8,10 +8,6 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JPanel
 
-enum class OperationMode {
-    ADD, EXTRACT
-}
-
 class Visualizer : JPanel() {
     private val retroQueue = PartialRetroPriorityQueue()
 
@@ -29,35 +25,45 @@ class Visualizer : JPanel() {
     private val endLife: Int
         get() = width - 10
 
-    private var insertMode = OperationMode.ADD
-    private var isDrawAiming = false
+    private enum class AimingMode {
+        EMPTY, ADD, EXTRACT
+    }
+
+    private var aimingMode = AimingMode.EMPTY
 
     init {
         addMouseListener(object : MouseAdapter() {
+            fun updateGlobals() {
+                cachedSegments = retroQueue.createSegments(endLife)
+                aimingMode = AimingMode.EMPTY
+                nearestSeg = emptySegment
+            }
+
             override fun mouseClicked(e: MouseEvent) {
                 when (e.button) {
-                    MouseEvent.BUTTON1 -> {
-                        if (isDrawAiming) {
-                            when (insertMode) {
-                                OperationMode.ADD -> retroQueue.insertAddOperation(e.x, height - e.y)
-                                OperationMode.EXTRACT -> retroQueue.insertExtractOperation(e.x)
-                            }
-                            cachedSegments = retroQueue.createSegments(endLife)
+                    MouseEvent.BUTTON1 -> when (aimingMode) {
+                        AimingMode.ADD -> {
+                            retroQueue.insertAddOperation(e.x, height - e.y)
+                            updateGlobals()
                         }
+                        else -> aimingMode = AimingMode.ADD
+                    }
 
-                        isDrawAiming = !isDrawAiming
-
-                        if (!nearestSeg.isEmpty) {
-
-                            if (nearestSeg.isHorizontal)
-                                retroQueue.deleteAddOperation(nearestSeg.x1)
-                            else
-                                retroQueue.deleteExtractOperation(nearestSeg.x1)
-
-                            cachedSegments = retroQueue.createSegments(endLife)
-                            nearestSeg = emptySegment
-                            isDrawAiming = false
+                    MouseEvent.BUTTON3 -> when (aimingMode) {
+                        AimingMode.EXTRACT -> {
+                            retroQueue.insertExtractOperation(e.x)
+                            updateGlobals()
                         }
+                        else -> aimingMode = AimingMode.EXTRACT
+                    }
+
+                    MouseEvent.BUTTON2 -> if (!nearestSeg.isEmpty) {
+                        if (nearestSeg.isHorizontal)
+                            retroQueue.deleteAddOperation(nearestSeg.x1)
+                        else
+                            retroQueue.deleteExtractOperation(nearestSeg.x1)
+
+                        updateGlobals()
                     }
                 }
                 repaint()
@@ -69,7 +75,7 @@ class Visualizer : JPanel() {
                 cursorPoint = e.point
                 nearestSeg = emptySegment
 
-                if (!isDrawAiming) {
+                if (aimingMode == AimingMode.EMPTY) {
                     var minDistance = Int.MAX_VALUE
                     var mirroredPoint = Point(cpx, cpyi)
 
@@ -88,8 +94,12 @@ class Visualizer : JPanel() {
         })
     }
 
-    private val defaultStroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
+    private val defaultStroke    = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
     private val simpleBoldStroke = BasicStroke(3f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
+    private val deleteOpStroke   = BasicStroke(5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER)
+
+    private val DARK_BLUE   = Color(30, 35, 146)
+    private val DARK_ORANGE = Color(255, 129, 0)
 
     override fun getGraphics() = super.getGraphics()?.apply {
         this as Graphics2D
@@ -101,9 +111,15 @@ class Visualizer : JPanel() {
     override fun paint(g: Graphics) {
         g as Graphics2D
 
-        fun drawSimpleSegments(segments: List<Segment>) {
-            g.color = Color.WHITE
-            g.stroke = defaultStroke
+        fun drawCustomSegment(s: Segment, segColor: Color, segStroke: Stroke) {
+            g.color = segColor
+            g.stroke = segStroke
+            g.drawSegment(s)
+        }
+
+        fun drawSegmentsList(segments: List<Segment>, segColor: Color, segStroke: Stroke) {
+            g.color = segColor
+            g.stroke = segStroke
             segments.forEach { g.drawSegment(it) }
         }
 
@@ -112,7 +128,9 @@ class Visualizer : JPanel() {
 
         g.color = Color.WHITE
         g.drawString("Point: ($cpx, $cpyi)", 0, 20)
-        g.drawString("Mode: $insertMode key", 0, 40)
+        g.drawString("Press LeftMB to insert `ADD` operation", 0, 40)
+        g.drawString("Press RightMB to insert `EXTRACT` operation", 0, 60)
+        g.drawString("Press Middle(Wheel) to delete operation", 0, 80)
 
         // draw current time line
         g.color = Color.BLUE
@@ -122,44 +140,25 @@ class Visualizer : JPanel() {
         g.stroke = curTimeStroke
         g.drawLine(endLife, 0, endLife, height)
 
-        if (!isDrawAiming) {
-            drawSimpleSegments(cachedSegments)
-
-            // draw nearest segment
-            if (!nearestSeg.isEmpty) {
-                g.color = Color.MAGENTA
-                g.stroke = simpleBoldStroke
-                g.drawSegment(nearestSeg)
-            }
-
-            return
-        }
-
         val (newSegments, first) = updatedSegments()
 
-        // draw active ray
-        g.stroke = simpleBoldStroke
-        when (insertMode) {
-            OperationMode.ADD -> {
+        when (aimingMode) {
+            AimingMode.EMPTY -> if (!nearestSeg.isEmpty) drawCustomSegment(nearestSeg, DARK_BLUE, deleteOpStroke)
+            AimingMode.ADD -> { // draw green `add` ray
                 val addEnd = first?.x1 ?: endLife
-
-                g.color = Color.GREEN
-                g.drawLine(cpx, cpy, addEnd, cpy)
+                drawCustomSegment(Segment(cpx, cpyi, addEnd, cpyi), Color.GREEN, simpleBoldStroke)
             }
-            OperationMode.EXTRACT -> {
+            AimingMode.EXTRACT -> { // draw red `extract` ray
                 val extractEnd = first?.y1 ?: height
-
-                g.color = Color.RED
-                g.drawLine(cpx, height, cpx, height - extractEnd)
+                drawCustomSegment(Segment(cpx, 0, cpx, extractEnd), Color.RED, simpleBoldStroke)
             }
         }
 
         val newSegmentsIds = newSegments.map(Segment::sid).toHashSet()
         val unchangedSegments = cachedSegments.filter { it.sid !in newSegmentsIds }
 
-        g.color = Color.ORANGE
-        newSegments.forEach { g.drawSegment(it) }
-        drawSimpleSegments(unchangedSegments)
+        drawSegmentsList(newSegments, DARK_ORANGE, simpleBoldStroke)
+        drawSegmentsList(unchangedSegments, Color.WHITE, defaultStroke)
     }
 
     private fun traverseFromVertical(): Pair<List<Segment>, Segment?> {
@@ -230,17 +229,9 @@ class Visualizer : JPanel() {
         return Pair(updatedSegments, meetSegment)
     }
 
-    private fun updatedSegments() = when (insertMode) {
-        OperationMode.ADD     -> traverseFromVertical()
-        OperationMode.EXTRACT -> traverseFromHorizontal()
-    }
-
-    fun switchMode() {
-        insertMode = when (insertMode) {
-            OperationMode.ADD -> OperationMode.EXTRACT
-            OperationMode.EXTRACT -> OperationMode.ADD
-        }
-
-        repaint()
+    private fun updatedSegments() = when (aimingMode) {
+        AimingMode.EMPTY   -> Pair(emptyList<Segment>(), null)
+        AimingMode.ADD     -> traverseFromVertical()
+        AimingMode.EXTRACT -> traverseFromHorizontal()
     }
 }

@@ -5,13 +5,17 @@ import java.awt.Point
 fun Point.distTo(x0: Int, y0: Int)
         = Math.sqrt(((x - x0) * (x - x0) + (y - y0) * (y - y0)).toDouble()).toInt()
 
+// something went wrong here after creating simple immutable segment class
 data class Segment(
-        val sid: Int,
+        val sid: Int, // TODO: make default to remove secondary constructor?
         val x1: Int, val y1: Int,
         var x2: Int, var y2: Int,  // this ends can change their value
         var nextOnAdd: Segment? = null,
         var nextOnExtract: Segment? = null
 ) {
+
+    constructor(ax: Int, ay: Int, bx: Int, by: Int) : this(-1, ax, ay, bx, by)
+
     val isHorizontal: Boolean
         get() = y1 == y2
 
