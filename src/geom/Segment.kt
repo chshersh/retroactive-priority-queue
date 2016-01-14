@@ -39,3 +39,9 @@ data class Segment(
 }
 
 val emptySegment = Segment(-1, -1, -1, -1, -1)
+val y2Comparator = { s1: Segment, s2: Segment ->
+    if (s1.y2 == s2.y2)
+        s1.sid.compareTo(s2.sid)
+    else
+        s1.y2.compareTo(s2.y2)
+}

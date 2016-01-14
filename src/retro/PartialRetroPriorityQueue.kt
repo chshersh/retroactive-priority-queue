@@ -1,6 +1,7 @@
 package retro
 
 import geom.Segment
+import geom.y2Comparator
 import java.util.*
 
 class PartialRetroPriorityQueue(
@@ -39,9 +40,14 @@ class PartialRetroPriorityQueue(
     fun createSegments(maxLifeTime: Int): List<Segment> {
         var curId = 0
         val deadSegments = arrayListOf<Segment>()
-        val queue = PriorityQueue<Segment>({ s1, s2 -> s1.y1.compareTo(s2.y1) })
+        val queue = PriorityQueue<Segment>(y2Comparator)
+        var extractedKeys = arrayListOf<Segment>()
 
-        var prevAddSegment: Segment? = null
+        fun setNextOnAdd(extractSegment: Segment) {
+            val (lower, higher) = extractedKeys.partition { it.y2 <= extractSegment.y2 }
+            lower.forEach { it.nextOnAdd = extractSegment }
+            extractedKeys = higher.toArrayList()
+        }
 
         for ((time, ops) in operations) {
             for (operation in ops) {
@@ -50,10 +56,7 @@ class PartialRetroPriorityQueue(
                     Operation.Extract ->
                         if (queue.isEmpty()) {
                             val extractRay = Segment(curId++, time, 0, time, Int.MAX_VALUE)
-
-                            prevAddSegment?.nextOnAdd = extractRay
-                            prevAddSegment = null
-
+                            setNextOnAdd(extractRay)
                             deadSegments.add(extractRay)
                         } else {
                             val addSegment = queue.poll()
@@ -65,11 +68,11 @@ class PartialRetroPriorityQueue(
                             extractSegment.nextOnAdd = addSegment
                             extractSegment.nextOnExtract = queue.peek()
 
-                            prevAddSegment?.nextOnAdd = extractSegment
-                            prevAddSegment = addSegment
+                            setNextOnAdd(extractSegment)
 
                             deadSegments.add(extractSegment)
                             deadSegments.add(addSegment)
+                            extractedKeys.add(addSegment)
                         }
                 }
             }
