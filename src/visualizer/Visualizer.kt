@@ -177,7 +177,7 @@ class Visualizer : JPanel() {
                 val lastSegment = if (cur.isHorizontal)
                     cur.copy(x2 = endLife)
                 else
-                    cur.copy(y2 = Int.MAX_VALUE)
+                    cur.copy(y2 = prev.y2)
 
                 updatedSegments.add(lastSegment)
                 break

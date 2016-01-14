@@ -49,8 +49,12 @@ class PartialRetroPriorityQueue(
                     is Operation.Add -> queue.add(Segment(curId++, time, operation.key, maxLifeTime, operation.key))
                     Operation.Extract ->
                         if (queue.isEmpty()) {
-                            // non-accurate case handling for now
-                            deadSegments.add(Segment(curId++, time, 0, time, Int.MAX_VALUE))
+                            val extractRay = Segment(curId++, time, 0, time, Int.MAX_VALUE)
+
+                            prevAddSegment?.nextOnAdd = extractRay
+                            prevAddSegment = null
+
+                            deadSegments.add(extractRay)
                         } else {
                             val addSegment = queue.poll()
                             val extractSegment = Segment(curId++, time, 0, time, addSegment.y1)
