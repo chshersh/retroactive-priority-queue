@@ -1,8 +1,8 @@
-package visualizer
+package algo.visualizer
 
-import geom.Segment
-import geom.emptySegment
-import retro.PartialRetroPriorityQueue
+import algo.geom.Segment
+import algo.geom.emptySegment
+import algo.retro.PartialRetroPriorityQueue
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent

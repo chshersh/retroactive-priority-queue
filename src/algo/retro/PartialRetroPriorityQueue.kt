@@ -1,7 +1,7 @@
-package retro
+package algo.retro
 
-import geom.Segment
-import geom.y2Comparator
+import algo.geom.Segment
+import algo.geom.y2Comparator
 import java.util.*
 
 class PartialRetroPriorityQueue(

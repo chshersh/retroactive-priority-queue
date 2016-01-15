@@ -1,4 +1,4 @@
-package geom
+package algo.geom
 
 import java.awt.Point
 

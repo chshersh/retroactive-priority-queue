@@ -1,4 +1,4 @@
-package visualizer
+package algo.visualizer
 
 import java.awt.Dimension
 import javax.swing.JFrame
