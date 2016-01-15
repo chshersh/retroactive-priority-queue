@@ -59,3 +59,14 @@ fun insert(t: Treap?, pos: Int): Treap {
     val newPrior = defaultRandomGen.nextInt()
     return insertTree(t, pos, Treap(newPrior))
 }
+
+fun delete(t: Treap?, pos: Int): Treap? {
+    if (t == null)
+        return null
+    else if (t.left.len == pos) {
+        return merge(t.left, t.right)
+    } else if (pos < t.left.len)
+        return t.copy(left = delete(t.left, pos))
+    else // pos > t.left.len
+        return t.copy(right = delete(t.left, pos - t.left.len))
+}
