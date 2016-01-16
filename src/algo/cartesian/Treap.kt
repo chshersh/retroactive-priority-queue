@@ -31,6 +31,31 @@ class Treap(
     fun update() {
         size = 1 + left.len + right.len // TODO: replace with size of left tree?
     }
+
+    fun index(): Int {
+        var cur = this
+        var pos = left.len
+
+        do {
+            val par = cur.parent ?: break
+
+            if (cur === par.right)
+                pos += par.left.len + 1
+
+            cur = par
+        } while (true)
+
+        return pos
+    }
+
+    operator fun get(i: Int): Treap {
+        if (i == left.len)
+            return this
+        else if (i <= left.len)
+            return left!![i]
+        else
+            return right!![i - left.len - 1]
+    }
 }
 
 val Treap?.len: Int
@@ -63,7 +88,7 @@ fun split(t: Treap?, index: Int): Pair<Treap?, Treap?> { // res.first.size = ind
     }
 }
 
-val defaultRandomGen = Random()
+val defaultRandomGen = Random(42)
 
 fun insert(t: Treap?, pos: Int): Treap {
     fun insertTree(t: Treap?, key: Int, newPrior: Int): Treap {

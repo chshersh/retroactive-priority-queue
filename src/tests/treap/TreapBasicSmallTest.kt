@@ -1,10 +1,11 @@
-package tests
+package tests.treap
 
 import algo.cartesian.*
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TreapBasicSmallTest {
+    // test split and merge basic cases
     @Test
     fun testSplitOneByZero() {
         val t = Treap(0)
@@ -32,6 +33,19 @@ class TreapBasicSmallTest {
         assertEquals(2, t.len)
     }
 
+    @Test
+    fun testMergeSpitMerge() {
+        val t0 = Treap(0)
+        val t1 = Treap(1)
+
+        val t = merge(t0, t1)
+        val (l, r) = split(t, 1)
+        val m = merge(l, r)
+
+        assertEquals(2, m.len)
+    }
+
+    // test split and delete with insert
     @Test
     fun testOneInsert() {
         val t = insert(null, 0)
@@ -141,5 +155,33 @@ class TreapBasicSmallTest {
         val t3 = insert(t2, 1)
 
         assertEquals(2, t3.size)
+    }
+
+    // test correct indices
+    @Test
+    fun testIndexOneElement() {
+        val t = insert(null, 0)
+
+        assertEquals(0, t.index())
+    }
+
+    @Test
+    fun testTwoElementIndices() {
+        val t0 = insert(null, 0)
+        val t1 = insert(t0, 1)
+
+        assertEquals(0, t1[0].index())
+        assertEquals(1, t1[1].index())
+    }
+
+    @Test
+    fun testThreeIndexZero() {
+        val t0 = insert(null, 0)
+        val t1 = insert(t0, 0)
+        val t2 = insert(t1, 0)
+
+        assertEquals(0, t2[0].index())
+        assertEquals(1, t2[1].index())
+        assertEquals(2, t2[2].index())
     }
 }

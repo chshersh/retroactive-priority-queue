@@ -1,4 +1,4 @@
-package tests
+package tests.retro
 
 import algo.retro.NaivePartialRetroPriorityQueue
 import org.junit.Assert.assertEquals
