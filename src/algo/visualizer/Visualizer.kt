@@ -2,14 +2,14 @@ package algo.visualizer
 
 import algo.geom.Segment
 import algo.geom.emptySegment
-import algo.retro.PartialRetroPriorityQueue
+import algo.retro.NaivePartialRetroPriorityQueue
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JPanel
 
 class Visualizer : JPanel() {
-    private val retroQueue = PartialRetroPriorityQueue()
+    private val retroQueue = NaivePartialRetroPriorityQueue()
 
     private var cachedSegments = emptyList<Segment>()
     private var nearestSeg = emptySegment
