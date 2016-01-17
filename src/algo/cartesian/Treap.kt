@@ -11,7 +11,7 @@ class Treap(
         val priority: Int,
         leftSon: Treap? = null,
         rightSon: Treap? = null,
-        var weight: Int = 0,
+        w: Int = 0,
         var operation: Operation? = null
 ) {
     var parent: Treap? = null
@@ -35,12 +35,24 @@ class Treap(
 
     var size = 0
 
-    var minSum = weight
-    var maxSum = weight
-    var weightSum = weight
+    var weight = w
+        set(value) {
+            field = value
 
-    var minNotInQNow = weight  // only on left  subtree and current node
-    var maxInQNow = weight     // only on right subtree and current node
+            var cur: Treap? = this
+            while (cur != null) {
+                cur.update()
+                cur = cur.parent
+            }
+        }
+
+    var minSum = w
+    var maxSum = w
+    var weightSum = w
+
+    // references to nodes with minimal/maximal values
+    var minNotInQNow: Treap? = null  // only on left  subtree and current node
+    var maxInQNow: Treap?    = null  // only on right subtree and current node
 
     init { update() }
 
@@ -51,8 +63,8 @@ class Treap(
         maxSum = max(left.smax, left.sum + right.smax)
         weightSum = weight + left.sum + right.sum
 
-        minNotInQNow = min(left.qmin,  this.qmin)
-        maxInQNow    = max(right.qmax, this.qmax)
+        minNotInQNow = minByQ(left,  this)
+        maxInQNow    = maxByQ(right, this)
     }
 
     fun index(): Int {
@@ -140,24 +152,27 @@ val Treap?.qmin: Int
 val Treap?.qmax: Int
     get() = if (this !== null && inQNow) (operation as Add).key else Int.MIN_VALUE
 
-fun Treap?.prefixMin(toPos: Int): Int {
+fun minByQ(t1: Treap?, t2: Treap?) = arrayOf(t1, t2).minBy(Treap?::qmin)?.minNotInQNow
+fun maxByQ(t1: Treap?, t2: Treap?) = arrayOf(t1, t2).maxBy(Treap?::qmax)?.maxInQNow
+
+fun Treap?.prefixMin(toPos: Int): Treap? {
     if (this === null)
-        return Int.MAX_VALUE
+        return null
     else if (toPos == left.len)
         return minNotInQNow
     else if (toPos < left.len)
         return left.prefixMin(toPos)
     else // toPos > left.len
-        return min(right.prefixMin(toPos - left.len), minNotInQNow)
+        return minByQ(right.prefixMin(toPos - left.len), this)
 }
 
-fun Treap?.suffixMax(fromPos: Int): Int {
+fun Treap?.suffixMax(fromPos: Int): Treap? {
     if (this === null)
-        return Int.MIN_VALUE
+        return null
     else if (fromPos == left.len)
         return maxInQNow
     else if (fromPos < left.len)
-        return min(left.suffixMax(fromPos), maxInQNow)
+        return maxByQ(left.suffixMax(fromPos), this)
     else // fromPos > left.len
         return right.suffixMax(fromPos - left.len)
 }
@@ -191,24 +206,25 @@ fun split(t: Treap?, index: Int): Pair<Treap?, Treap?> { // res.first.size = ind
 
 val defaultRandomGen = Random(42)
 
-fun insert(t: Treap?, pos: Int): Treap {
-    fun insertTree(t: Treap?, key: Int, newPrior: Int): Treap {
+fun insert(t: Treap?, pos: Int, op: Operation? = null, weight: Int = 0): Treap {
+    val newPrior = defaultRandomGen.nextInt()
+
+    fun insertTree(t: Treap?, key: Int): Treap {
         if (t === null)
-            return Treap(newPrior)
+            return Treap(newPrior, w = weight, operation = op)
         else if (newPrior > t.priority) {
             val (l, r) = split(t, key)
-            return Treap(newPrior, l, r)
+            return Treap(newPrior, l, r, w = weight, operation = op)
         } else if (key <= t.left.len) {
-            t.left = insertTree(t.left, key, newPrior)
+            t.left = insertTree(t.left, key)
             return t
         } else { // key > t.left.len
-            t.right = insertTree(t.right, key - t.left.len, newPrior)
+            t.right = insertTree(t.right, key - t.left.len)
             return t
         }
     }
 
-    val newPrior = defaultRandomGen.nextInt()
-    return insertTree(t, pos, newPrior)
+    return insertTree(t, pos)
 }
 
 fun delete(t: Treap?, pos: Int): Treap? {
