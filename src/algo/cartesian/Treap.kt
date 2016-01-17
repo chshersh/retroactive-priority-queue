@@ -45,7 +45,7 @@ class Treap(
     init { update() }
 
     fun update() {
-        size = 1 + left.len + right.len // TODO: replace with size of left tree?
+        size = 1 + left.len + right.len
 
         minSum = min(left.smin, left.sum + right.smin)
         maxSum = max(left.smax, left.sum + right.smax)
@@ -76,12 +76,49 @@ class Treap(
             else
                 right!![i - left.len - 1]
 
-    fun nextBridge(pos: Int): Treap? {
-        return null
+    fun nextBridge(fromPos: Int): Treap? {
+        fun query(pos: Int, currentPrefixSum: Int, t: Treap?): Treap? {
+            if (t === null)
+                return null
+
+            val newPrefixSum = currentPrefixSum + t.left.sum + t.weight
+
+            if (pos >= left.len)
+                return query(pos - t.left.len, newPrefixSum, t.right)
+
+            val leftQuery = query(pos, currentPrefixSum, t.left)
+            val curNode = if (newPrefixSum == 0) t else null
+            val rightQuery = if (currentPrefixSum + t.right.smin <= 0 && 0 <= currentPrefixSum + t.right.smax)
+                query(pos - t.left.len, newPrefixSum, t.right)
+            else
+                null
+
+            return leftQuery ?: curNode ?: rightQuery
+        }
+
+        return query(fromPos, 0, this)
     }
 
-    fun prevBridge(pos: Int): Treap? {
-        return null
+    fun prevBridge(toPos: Int): Treap? {
+        fun query(pos: Int, currentPrefixSum: Int, t: Treap?): Treap? {
+            if (t === null)
+                return null
+            else if (pos <= left.len)
+                return query(pos, currentPrefixSum, t.left)
+
+            val newPrefixSum = currentPrefixSum + t.left.sum + t.weight
+
+            val leftQuery = if (currentPrefixSum + t.left.smin <= 0 && 0 <= currentPrefixSum + t.left.smax)
+                query(pos, currentPrefixSum, t.left)
+            else
+                null
+            val curNode = if (newPrefixSum == 0) t else null
+            val rightQuery = query(pos - t.left.len, newPrefixSum, t.right)
+
+            return leftQuery ?: curNode ?: rightQuery
+        }
+
+        return query(toPos, 0, this)
     }
 }
 
