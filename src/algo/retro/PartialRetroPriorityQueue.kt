@@ -7,12 +7,24 @@ import java.lang.Math.max
 import java.util.*
 
 class PartialRetroPriorityQueue : RetroPriorityQueue {
-    private var weightTree: Treap? = null
+    private var weightTree: Treap
     private val queueNow = sortedSetOf<Int>()
 
     // TODO: handle similar keys (add id to operations)
     // TODO: replace with ad-hoc implementation based on HashSet and PriorityQueue
     private val operations = TreeMap<Int, MutableList<Treap>>()
+
+    init {
+        // there is always a bridge in -inf and +inf times
+        weightTree = insert(null, 0, op = Add(Int.MAX_VALUE), weight = 0)
+        operations.put(Int.MIN_VALUE, arrayListOf(weightTree))
+
+        weightTree = insert(weightTree, 1, op = Add(Int.MAX_VALUE), weight = 0)
+        //operations.put(Int.MAX_VALUE, arrayListOf(weightTree)) // TODO: is it used?
+    }
+
+    override val isEmpty: Boolean
+        get() = queueNow.isEmpty()
 
     override val min: Int
         get() = queueNow.first() // TODO: improve from O(log n) to O(1)
@@ -31,7 +43,7 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
 
         val weight = when (operation) {
             is Add -> {
-                val beforeBridge = weightTree?.prevBridge(prevIndex) // TODO: optimize to get index, not Treap
+                val beforeBridge = weightTree.prevBridge(prevIndex) // TODO: optimize to get index, not Treap
                 val bridgeIndex = beforeBridge?.index()
                 val maxNode = if (bridgeIndex === null)
                     null
@@ -42,14 +54,14 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
                 queueNow += keyToInsert
 
                 if (keyToInsert == operation.key)
-                    1
+                    0
                 else {
                     maxNode?.weight = 0
-                    0
+                    1
                 }
             }
             Extract -> {
-                val afterBridge = weightTree?.nextBridge(prevIndex)
+                val afterBridge = weightTree.nextBridge(prevIndex)
                 val bridgeIndex = afterBridge?.index()
                 val minNode = if (bridgeIndex === null)
                     null
@@ -64,14 +76,15 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
             }
         }
 
-        weightTree = insert(weightTree, prevIndex, operation, weight)
-        currentList += weightTree!![prevIndex] // TODO: optimize to get inserted node
+        val newPos = prevIndex + 1
+        weightTree = insert(weightTree, newPos, operation, weight)
+        currentList += weightTree[newPos] // TODO: optimize to get inserted node
     }
 
     override fun deleteAddOperation(time: Int) = deleteOperation(time) { it.operation is Add }
     override fun deleteExtractOperation(time: Int) = deleteOperation(time) { it.operation !is Add }
 
-    private fun deleteOperation(time: Int, opFind: (Treap) -> Boolean) {
+    private inline fun deleteOperation(time: Int, opFind: (Treap) -> Boolean) {
         val timeOps = operations[time] ?: return
         val pos = timeOps.indexOfFirst(opFind)
         val opTree = timeOps[pos]
@@ -79,20 +92,23 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
         val operation = opTree.operation
 
         when (operation) {
-            is Add -> {
-                val afterBridge = weightTree?.nextBridge(opIndex)
-                val bridgeIndex = afterBridge?.index()
-                val minNode = if (bridgeIndex === null)
-                    null
-                else
-                    weightTree.prefixMin(bridgeIndex)
+            is Add ->
+                if (operation.key in queueNow)
+                    queueNow -= operation.key
+                else {
+                    val afterBridge = weightTree.nextBridge(opIndex)
+                    val bridgeIndex = afterBridge?.index()
+                    val minNode = if (bridgeIndex === null)
+                        null
+                    else
+                        weightTree.prefixMin(bridgeIndex)
 
-                val keyToRemove = (minNode?.operation as Add).key // TODO: exception if no keys to delete
-                queueNow -= keyToRemove
-                minNode?.weight = 1
-            }
+                    val keyToRemove = (minNode?.operation as Add).key // TODO: exception if no keys to delete
+                    queueNow -= keyToRemove
+                    minNode?.weight = 1
+                }
             Extract -> {
-                val beforeBridge = weightTree?.prevBridge(opIndex) // TODO: optimize to get index, not Treap
+                val beforeBridge = weightTree.prevBridge(opIndex) // TODO: optimize to get index, not Treap
                 val bridgeIndex = beforeBridge?.index()
                 val maxNode = if (bridgeIndex === null)
                     null
@@ -105,7 +121,7 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
             }
         }
 
-        weightTree = delete(weightTree, opIndex) // TODO: improve to faster delete by reference
+        weightTree = delete(weightTree, opIndex)!! // TODO: improve to faster delete by reference
         timeOps.removeAt(pos)
         if (timeOps.isEmpty()) operations.remove(time)
     }

@@ -8,7 +8,7 @@ class TreapBasicSmallTest {
     // test split and merge basic cases
     @Test
     fun testSplitOneByZero() {
-        val t = Treap(0)
+        val t = Treap(0, w = 0, operation = maxAdd)
         val (l, r) = split(t, 0)
 
         assertEquals(0, l.len)
@@ -17,7 +17,7 @@ class TreapBasicSmallTest {
 
     @Test
     fun testSplitOneByOne() {
-        val t = Treap(0)
+        val t = Treap(0, w = 0, operation = maxAdd)
         val (l, r) = split(t, 1)
 
         assertEquals(1, l.len)
@@ -26,8 +26,8 @@ class TreapBasicSmallTest {
 
     @Test
     fun testMergeTwo() {
-        val t0 = Treap(0)
-        val t1 = Treap(1)
+        val t0 = Treap(0, w = 0, operation = maxAdd)
+        val t1 = Treap(1, w = 0, operation = maxAdd)
         val t = merge(t0, t1)
 
         assertEquals(2, t.len)
@@ -35,8 +35,8 @@ class TreapBasicSmallTest {
 
     @Test
     fun testMergeSpitMerge() {
-        val t0 = Treap(0)
-        val t1 = Treap(1)
+        val t0 = Treap(0, w = 0, operation = maxAdd)
+        val t1 = Treap(1, w = 0, operation = maxAdd)
 
         val t = merge(t0, t1)
         val (l, r) = split(t, 1)
@@ -172,6 +172,15 @@ class TreapBasicSmallTest {
 
         assertEquals(0, t1[0].index())
         assertEquals(1, t1[1].index())
+    }
+
+    @Test
+    fun testTwoElementsSamePlaceIndex() {
+        val t0 = insert(null, 0, weight = 5)
+        val t1 = insert(t0, 0, weight = 10)
+
+        assertEquals(10, t1[0].weight)
+        assertEquals(5, t1[1].weight)
     }
 
     @Test

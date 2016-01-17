@@ -10,6 +10,9 @@ class NaivePartialRetroPriorityQueue(
 
     constructor(otherQueueNaive: NaivePartialRetroPriorityQueue) : this(otherQueueNaive.operations)
 
+    override val isEmpty: Boolean
+        get() = throw UnsupportedOperationException()
+
     override val min: Int
         get() {
             val queue = PriorityQueue<Int>()
