@@ -16,13 +16,13 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
 
     // TODO: handle similar keys (add id to operations)
     // TODO: replace with ad-hoc implementation based on HashSet and PriorityQueue
-    private val operations = TreeMap<Int, MutableList<Node>>()
+    private val operationNodes = TreeMap<Int, MutableList<Node>>()
 
     init {
         // there is always a bridge in -inf and +inf times
         val negInfNode = Node(Add(Int.MAX_VALUE - 1)) // TODO: remove dirty hack
         weightTree = insert(null, 0, nd = negInfNode, weight = 0)
-        operations.put(Int.MIN_VALUE, arrayListOf(negInfNode))
+        operationNodes.put(Int.MIN_VALUE, arrayListOf(negInfNode))
 
         val posInfNode = Node(Add(Int.MAX_VALUE - 1)) // TODO: remove dirty hack
         weightTree = insert(weightTree, 1, nd = posInfNode, weight = 0)
@@ -34,17 +34,20 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
     override val min: Int
         get() = queueNow.first() // TODO: improve from O(log n) to O(1)
 
+    override val operations: SortedMap<Int, List<Operation>>
+        get() = operationNodes.mapValues { it.value.map(Node::operation) }.toSortedMap()
+
     override fun insertAddOperation(time: Int, key: Int) = insertOperation(time, Add(key))
     override fun insertExtractOperation(time: Int)       = insertOperation(time, Extract)
 
     private fun insertOperation(time: Int, operation: Operation) {
-        val prevOperationList = if (time in operations)
-            operations[time]
+        val prevOperationList = if (time in operationNodes)
+            operationNodes[time]
         else
-            operations.lowerEntry(time)?.value
+            operationNodes.lowerEntry(time)?.value
 
         val prevIndex = prevOperationList?.last()?.tree?.index() ?: 0
-        val currentList = operations.getOrPut(time) { arrayListOf() } // TODO: safe one call to operations[time]
+        val currentList = operationNodes.getOrPut(time) { arrayListOf() } // TODO: safe one call to operations[time]
 
         val weight = when (operation) {
             is Add -> {
@@ -91,7 +94,7 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
     override fun deleteExtractOperation(time: Int) = deleteOperation(time) { it.operation !is Add }
 
     private inline fun deleteOperation(time: Int, opFind: (Node) -> Boolean) {
-        val timeOps = operations[time] ?: return
+        val timeOps = operationNodes[time] ?: return
         val pos = timeOps.indexOfFirst(opFind)
         val opNode = timeOps[pos]
         val opTree = opNode.tree
@@ -130,6 +133,6 @@ class PartialRetroPriorityQueue : RetroPriorityQueue {
 
         weightTree = delete(weightTree, opIndex)!! // TODO: improve to faster delete by reference
         timeOps.removeAt(pos)
-        if (timeOps.isEmpty()) operations.remove(time)
+        if (timeOps.isEmpty()) operationNodes.remove(time)
     }
 }
