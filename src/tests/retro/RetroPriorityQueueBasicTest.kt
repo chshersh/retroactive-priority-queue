@@ -80,7 +80,7 @@ class RetroPriorityQueueBasicTest {
     }
 
     @Test
-    fun testInsertDeleteInsert() {
+    fun testInsertExtractInsert() {
         val q = PartialRetroPriorityQueue()
         q.insertAddOperation(0, 5)
         q.insertExtractOperation(1)
@@ -89,6 +89,41 @@ class RetroPriorityQueueBasicTest {
         assertEquals(10, q.min)
     }
 
+    @Test
+    fun testInsertInsertExtractExtract() {
+        val q = PartialRetroPriorityQueue()
+        q.insertAddOperation(0, 5)
+        q.insertAddOperation(1, 10)
+        q.insertExtractOperation(2)
+        q.insertExtractOperation(3)
+
+        assertTrue(q.isEmpty)
+    }
+
+    @Test
+    fun testInsertExtractInsertExtract() {
+        val q = PartialRetroPriorityQueue()
+        q.insertAddOperation(0, 5)
+        q.insertExtractOperation(1)
+        q.insertAddOperation(2, 10)
+        q.insertExtractOperation(3)
+
+        assertTrue(q.isEmpty)
+    }
+
+    @Test
+    fun testInsertExtractInsertExtractInsert() {
+        val q = PartialRetroPriorityQueue()
+        q.insertAddOperation(0, 5)
+        q.insertExtractOperation(1)
+        q.insertAddOperation(2, 10)
+        q.insertExtractOperation(3)
+        q.insertAddOperation(4, 20)
+
+        assertEquals(20, q.min)
+    }
+
+    /** tests with operations deletion */
     @Test
     fun testInsertRemoveOperation() {
         val q = PartialRetroPriorityQueue()
@@ -176,5 +211,32 @@ class RetroPriorityQueueBasicTest {
         q.deleteExtractOperation(1)
 
         assertEquals(5, q.min)
+    }
+
+    @Test
+    fun testInsertExtractInsertRemoveInsertExtract() {
+        val q = PartialRetroPriorityQueue()
+
+        q.insertAddOperation(0, 5)
+        q.insertExtractOperation(1)
+        q.insertAddOperation(2, 10)
+
+        q.deleteExtractOperation(1)
+        q.deleteAddOperation(2)
+
+        assertEquals(5, q.min)
+    }
+
+    @Test
+    fun testInsertInsertRemoveInsertInsert() {
+        val q = PartialRetroPriorityQueue()
+
+        q.insertAddOperation(0, 5)
+        q.insertAddOperation(1, 10)
+
+        q.deleteAddOperation(0)
+        q.deleteAddOperation(1)
+
+        assertTrue(q.isEmpty)
     }
 }

@@ -166,20 +166,23 @@ fun maxByQ(vararg t: Treap?) = t.maxBy(Treap?::qmax)
 fun IntRange.isEmptyIntersection(from: Int, to: Int)
         = (max(start, from) .. min(endInclusive, to)).isEmpty()
 
+fun IntRange.containsRange(from: Int, to: Int)
+        = start <= from && to <= endInclusive
+
 fun Treap?.prefixMin(toPos: Int): Treap? {
     val toRange = Int.MIN_VALUE .. toPos
 
     fun queryMin(l: Int, r: Int, t: Treap?): Treap? {
         if (t === null || toRange.isEmptyIntersection(l, r))
             return null
-
-        val curIndex = l + t.left.len
-        if (curIndex <= toRange.endInclusive)
+        else if (toRange.containsRange(l, r))
             return t.minInQ
 
+        val curIndex = l + t.left.len
+        val curNode = if (curIndex in toRange) t.thisIfInQ else null
         return minByQ(
                 queryMin(l, curIndex - 1, t.left),
-                t.thisIfInQ,
+                curNode,
                 queryMin(curIndex + 1, r, t.right)
         )
     }
@@ -193,14 +196,14 @@ fun Treap?.suffixMax(fromPos: Int): Treap? {
     fun queryMax(l: Int, r: Int, t: Treap?): Treap? {
         if (t === null || fromRange.isEmptyIntersection(l, r))
             return null
-
-        val curIndex = l + t.left.len
-        if (fromRange.start <= curIndex)
+        else if (fromRange.containsRange(l, r))
             return t.maxNotInQ
 
+        val curIndex = l + t.left.len
+        val curNode = if (curIndex in fromRange) t.nullIfInQ else null
         return maxByQ(
                 queryMax(l, curIndex - 1, t.left),
-                t.nullIfInQ,
+                curNode,
                 queryMax(curIndex + 1, r, t.right)
         )
     }

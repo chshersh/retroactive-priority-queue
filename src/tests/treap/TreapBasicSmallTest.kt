@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TreapBasicSmallTest {
-    // test split and merge basic cases
+    /** test split and merge basic cases */
     @Test
     fun testSplitOneByZero() {
         val t = Treap(0, w = 0, node = maxNode)
@@ -45,7 +45,7 @@ class TreapBasicSmallTest {
         assertEquals(2, m.len)
     }
 
-    // test split and delete with insert
+    /** test split and delete with insert */
     @Test
     fun testOneInsert() {
         val t = insert(null, 0)
@@ -157,7 +157,7 @@ class TreapBasicSmallTest {
         assertEquals(2, t3.size)
     }
 
-    // test correct indices
+    /** test correct indices */
     @Test
     fun testIndexOneElement() {
         val t = insert(null, 0)
@@ -192,5 +192,17 @@ class TreapBasicSmallTest {
         assertEquals(0, t2[0].index())
         assertEquals(1, t2[1].index())
         assertEquals(2, t2[2].index())
+    }
+
+    @Test
+    fun testMultipleInserts() {
+        val weights = Array(100000) { it }
+        var t = insert(null, 0, weight = weights[0])
+
+        for (i in 1..weights.lastIndex)
+            t = insert(t, i, weight = i)
+
+        for (w in weights)
+            assertEquals(w, t[w].weight)
     }
 }
