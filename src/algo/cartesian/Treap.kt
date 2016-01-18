@@ -1,6 +1,6 @@
 package algo.cartesian
 
-import algo.retro.Operation
+import algo.retro.Node
 import algo.retro.Operation.Add
 import java.lang.Math.max
 import java.lang.Math.min
@@ -12,7 +12,7 @@ class Treap(
         leftSon: Treap? = null,
         rightSon: Treap? = null,
         w: Int,
-        val operation: Operation
+        val node: Node
 ) {
     var parent: Treap? = null
 
@@ -30,11 +30,6 @@ class Treap(
             update()
         }
 
-    val inQNow: Boolean
-        get() = weight == 0
-
-    var size = 0
-
     var weight = w
         set(value) {
             field = value
@@ -46,20 +41,30 @@ class Treap(
             }
         }
 
+    val operation = node.operation
+
+    var size = 0
     var minSum = w
     var maxSum = w
     var weightSum = w
 
+    val inQNow: Boolean
+        get() = weight == 0
     val thisIfInQ: Treap?
         get() = if (inQNow) this else null
     val nullIfInQ: Treap?
         get() = if (inQNow) null else this
 
     // references to nodes with minimal/maximal values
-    var minInQ: Treap?    = thisIfInQ // only on left  subtree and current node
-    var maxNotInQ: Treap? = nullIfInQ // only on right subtree and current node
+    var minInQ: Treap?    = thisIfInQ
+    var maxNotInQ: Treap? = nullIfInQ
 
-    init { update() }
+    init {
+        node.tree = this
+        left?.parent = this
+        right?.parent = this
+        update()
+    }
 
     fun update() {
         size = 1 + left.len + right.len
@@ -68,8 +73,8 @@ class Treap(
         maxSum = max(left.smax, left.sum + weight + max(0, right.smax))
         weightSum = weight + left.sum + right.sum
 
-        minInQ    = minByQ(left?.minInQ,     thisIfInQ)
-        maxNotInQ = maxByQ(right?.maxNotInQ, nullIfInQ)
+        minInQ    = minByQ(left?.minInQ,    thisIfInQ, right?.minInQ)
+        maxNotInQ = maxByQ(left?.maxNotInQ, nullIfInQ, right?.maxNotInQ)
     }
 
     fun index(): Int {
@@ -94,49 +99,43 @@ class Treap(
                 right!![i - left.len - 1]
 
     fun nextBridge(fromPos: Int): Treap? {
-        fun query(pos: Int, currentPrefixSum: Int, t: Treap?): Treap? {
-            if (t === null)
-                return null
-            if (pos > t.size - 1)
+        val fromRange = fromPos .. Int.MAX_VALUE
+
+        fun query(l: Int, r: Int, currentPrefixSum: Int, t: Treap?): Treap? {
+            if (t === null || fromRange.isEmptyIntersection(l, r) || !t.hasBridge(currentPrefixSum))
                 return null
 
-            val leftQuery = query(pos, currentPrefixSum, t.left)
+            val curIndex = l + t.left.len
+            val leftQuery = query(l, curIndex - 1, currentPrefixSum, t.left)
             if (leftQuery !== null) return leftQuery
 
             val newPrefixSum = currentPrefixSum + t.left.sum + t.weight
-            // minimal sum is achieved on current position
-            if (newPrefixSum == 0) return t
+            if (newPrefixSum == 0 && curIndex >= fromRange.start) return t
 
-            return if (t.right.hasBridge(currentPrefixSum))
-                query(pos - t.left.len - 1, newPrefixSum, t.right)
-            else
-                null
+            return query(curIndex + 1, r, newPrefixSum, t.right)
         }
 
-        return query(fromPos, 0, this)
+        return query(0, size - 1, 0, this)
     }
 
     fun prevBridge(toPos: Int): Treap? {
-        fun query(pos: Int, currentPrefixSum: Int, t: Treap?): Treap? {
-            if (t === null)
-                return null
-            if (pos < 0)
+        val toRange = Int.MIN_VALUE .. toPos
+
+        fun query(l: Int, r: Int, currentPrefixSum: Int, t: Treap?): Treap? {
+            if (t === null || toRange.isEmptyIntersection(l, r) || !t.hasBridge(currentPrefixSum))
                 return null
 
+            val curIndex = l + t.left.len
             val newPrefixSum = currentPrefixSum + t.left.sum + t.weight
-            val rightQuery = query(pos - t.left.len - 1, newPrefixSum, t.right)
+            val rightQuery = query(curIndex + 1, r, newPrefixSum, t.right)
             if (rightQuery !== null) return rightQuery
 
-            // minimal sum is achieved on current position
-            if (newPrefixSum == 0) return t
+            if (newPrefixSum == 0 && curIndex <= toRange.endInclusive) return t
 
-            return if (t.left.hasBridge(currentPrefixSum))
-                query(pos, currentPrefixSum, t.left)
-            else
-                null
+            return query(l, curIndex - 1, currentPrefixSum, t.left)
         }
 
-        return query(toPos, 0, this)
+        return query(0, size - 1, 0, this)
     }
 }
 
@@ -161,29 +160,52 @@ val Treap?.qmin: Int  // minimum if in queueNow
 val Treap?.qmax: Int // maximum if not in queueNow
     get() = if (this !== null && !inQNow && operation is Add) operation.key else Int.MIN_VALUE
 
-fun minByQ(t1: Treap?, t2: Treap?) = arrayOf(t1, t2).minBy(Treap?::qmin)
-fun maxByQ(t1: Treap?, t2: Treap?) = arrayOf(t1, t2).maxBy(Treap?::qmax)
+fun minByQ(vararg t: Treap?) = t.minBy(Treap?::qmin)
+fun maxByQ(vararg t: Treap?) = t.maxBy(Treap?::qmax)
+
+fun IntRange.isEmptyIntersection(from: Int, to: Int)
+        = (max(start, from) .. min(endInclusive, to)).isEmpty()
 
 fun Treap?.prefixMin(toPos: Int): Treap? {
-    if (this === null)
-        return null
-    else if (toPos == left.len)
-        return minInQ
-    else if (toPos < left.len)
-        return left.prefixMin(toPos)
-    else // toPos > left.len
-        return minByQ(right.prefixMin(toPos - left.len), this)
+    val toRange = Int.MIN_VALUE .. toPos
+
+    fun queryMin(l: Int, r: Int, t: Treap?): Treap? {
+        if (t === null || toRange.isEmptyIntersection(l, r))
+            return null
+
+        val curIndex = l + t.left.len
+        if (curIndex <= toRange.endInclusive)
+            return t.minInQ
+
+        return minByQ(
+                queryMin(l, curIndex - 1, t.left),
+                t.thisIfInQ,
+                queryMin(curIndex + 1, r, t.right)
+        )
+    }
+
+    return queryMin(0, len - 1, this)
 }
 
 fun Treap?.suffixMax(fromPos: Int): Treap? {
-    if (this === null)
-        return null
-    else if (fromPos == left.len)
-        return maxNotInQ
-    else if (fromPos < left.len)
-        return maxByQ(left.suffixMax(fromPos), this)
-    else // fromPos > left.len
-        return right.suffixMax(fromPos - left.len)
+    val fromRange = fromPos .. Int.MAX_VALUE
+
+    fun queryMax(l: Int, r: Int, t: Treap?): Treap? {
+        if (t === null || fromRange.isEmptyIntersection(l, r))
+            return null
+
+        val curIndex = l + t.left.len
+        if (fromRange.start <= curIndex)
+            return t.maxNotInQ
+
+        return maxByQ(
+                queryMax(l, curIndex - 1, t.left),
+                t.nullIfInQ,
+                queryMax(curIndex + 1, r, t.right)
+        )
+    }
+
+    return queryMax(0, len - 1, this)
 }
 
 fun merge(l: Treap?, r: Treap?): Treap? {
@@ -206,30 +228,30 @@ fun split(t: Treap?, index: Int): Pair<Treap?, Treap?> { // res.first.size = ind
 
     if (curIndex <= index) {
         val (l, r) = split(t.right, index - curIndex)
-        return Pair(Treap(t.priority, t.left, l, w = t.weight, operation = t.operation), r)
+        return Pair(Treap(t.priority, t.left, l, w = t.weight, node = t.node), r)
     } else {
         val (l, r) = split(t.left, index)
-        return Pair(l, Treap(t.priority, r, t.right, w = t.weight, operation = t.operation))
+        return Pair(l, Treap(t.priority, r, t.right, w = t.weight, node = t.node))
     }
 }
 
 val defaultRandomGen = Random(42)
-val maxAdd = Add(Int.MAX_VALUE)
+val maxNode = Node(Add(Int.MAX_VALUE))
 
-fun insert(t: Treap?, pos: Int, op: Operation = maxAdd, weight: Int = 0): Treap {
+fun insert(t: Treap?, pos: Int, nd: Node = maxNode, weight: Int = 0): Treap {
     val newPrior = defaultRandomGen.nextInt()
 
     fun insertTree(t: Treap?, key: Int): Treap {
         if (t === null)
-            return Treap(newPrior, w = weight, operation = op)
+            return Treap(newPrior, w = weight, node = nd)
         else if (newPrior > t.priority) {
             val (l, r) = split(t, key)
-            return Treap(newPrior, l, r, w = weight, operation = op)
+            return Treap(newPrior, l, r, w = weight, node = nd)
         } else if (key <= t.left.len) {
             t.left = insertTree(t.left, key)
             return t
         } else { // key > t.left.len
-            t.right = insertTree(t.right, key - t.left.len)
+            t.right = insertTree(t.right, key - t.left.len - 1)
             return t
         }
     }

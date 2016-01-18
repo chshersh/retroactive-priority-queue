@@ -60,7 +60,7 @@ class RetroPriorityQueueBasicTest {
 //    }
 
     @Test
-    fun testInsertInsertDelete() {
+    fun testInsertInsertExtract() {
         val q = PartialRetroPriorityQueue()
         q.insertAddOperation(0, 5)
         q.insertAddOperation(1, 10)
