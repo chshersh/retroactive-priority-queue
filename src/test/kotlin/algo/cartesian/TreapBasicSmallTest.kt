@@ -1,6 +1,5 @@
-package tests.treap
+package algo.cartesian
 
-import algo.cartesian.*
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

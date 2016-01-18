@@ -1,4 +1,4 @@
-package tests.retro
+package algo.retro
 
 import algo.retro.Operation.Add
 import algo.retro.Operation.Extract
