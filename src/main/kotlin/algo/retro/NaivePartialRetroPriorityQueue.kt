@@ -7,13 +7,7 @@ import java.util.*
 class NaivePartialRetroPriorityQueue(
         override val operations: SortedMap<Int, List<Operation>> = sortedMapOf()
 ) : RetroPriorityQueue {
-
-    constructor(otherQueueNaive: NaivePartialRetroPriorityQueue) : this(otherQueueNaive.operations)
-
-    override val isEmpty: Boolean
-        get() = throw UnsupportedOperationException()
-
-    override val min: Int
+    private val asPriorityQueue: PriorityQueue<Int>
         get() {
             val queue = PriorityQueue<Int>()
 
@@ -26,8 +20,14 @@ class NaivePartialRetroPriorityQueue(
                 }
             }
 
-            return queue.peek()
+            return queue
         }
+
+    override val isEmpty: Boolean
+        get() = asPriorityQueue.isEmpty()
+
+    override val min: Int
+        get() = asPriorityQueue.peek()
 
     override fun insertAddOperation(time: Int, key: Int) = insertOperation(time, Add(key))
     override fun insertExtractOperation(time: Int)       = insertOperation(time, Extract)

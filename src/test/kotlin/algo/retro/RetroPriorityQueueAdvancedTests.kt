@@ -2,7 +2,6 @@ package algo.retro
 
 import algo.retro.Operation.Add
 import algo.retro.Operation.Extract
-import algo.retro.PartialRetroPriorityQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
