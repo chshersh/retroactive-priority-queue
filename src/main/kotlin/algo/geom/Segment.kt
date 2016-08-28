@@ -57,12 +57,12 @@ fun RetroPriorityQueue.createSegments(maxLifeTime: Int): List<Segment> {
     var curId = 0
     val deadSegments = arrayListOf<Segment>()
     val queue = PriorityQueue<Segment>(y2Comparator)
-    var extractedKeys = arrayListOf<Segment>()
+    var extractedKeys = mutableListOf<Segment>()
 
     fun setNextOnAdd(extractSegment: Segment) {
         val (lower, higher) = extractedKeys.partition { it.y2 <= extractSegment.y2 }
         lower.forEach { it.nextOnAdd = extractSegment }
-        extractedKeys = higher.toArrayList()
+        extractedKeys = higher.toMutableList()
     }
 
     val operationsMap = operations
